@@ -1,0 +1,236 @@
+package tutoria;
+import umontreal.ssj.simevents.*;
+import umontreal.ssj.rng.*;
+import umontreal.ssj.randvar.*;
+import umontreal.ssj.stat.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+
+import tutoria.QueueEv.Arrival;
+import tutoria.QueueEv.EndOfSim;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
+public class TravailFinal {
+    
+	LinkedList<Customer> tab[]=new LinkedList[8];
+	//la liste des client en service
+	LinkedList<Customer> lservice=new LinkedList<Customer>();
+	//Contient les LES des 8  types de service
+	double tab2[]=new double[8];
+	//la liste des clients qui ont été déja servis
+	ArrayList<Customer> lEndServiceCust=new ArrayList<Customer>();
+	public TravailFinal()
+	{ for(int i=0;i<8;i++)
+	   { tab[i]=new LinkedList<Customer>();
+	     tab2[i]=0.0; 
+	    }
+	}
+	
+	public int getIndice(int type){
+		
+		if(type==30175)
+		 return 0;
+	    else if(type==30560)
+			 return 1;
+		else if(type==30172)
+			 return 2;
+		else if(type==30181)
+			 return 3;
+		else if(type==30179)
+				return 4;
+		else if(type==30066)
+			return 5;
+		else if(type==3241)
+			return 6;
+		else
+			return 7;	
+	}
+	
+	
+	class Customer{
+	double arrivalTime;
+	double beginServiceTime=-1;
+	double endServiceTime;
+	double waitingTime;
+	int type;
+	int lf1,lf2, lf3, lf4, lf5,lf6,lf7,lf8;
+	int numberAgents;
+	double LES;
+}
+public void getSizeQueue(Customer cust) {
+
+}
+class Arrival extends Event{
+	Customer cust;
+	public Arrival(Customer cust){
+		this.cust=cust;
+	}
+	public void actions(){
+		getSizeQueue(cust);
+		cust.LES=tab2[getIndice(cust.type)];
+		cust.numberAgents=lservice.size();
+		if(cust.beginServiceTime<=cust.arrivalTime+3)
+			new EnterInService(cust).schedule(0.0);
+		else
+		{ 
+		  tab[getIndice(cust.type)].add(cust);
+		  		  
+		  if(cust.beginServiceTime==-1)
+			  new Abandon(cust).schedule(sim.time()-cust.endServiceTime);
+		  else
+			  new EnterInService(cust).schedule(cust.beginServiceTime);
+		}	
+			
+		
+	}
+}
+class Abandon extends Event{
+	Customer cust;
+	public Abandon(Customer cust){
+		this.cust=cust;
+	}
+	public void actions(){
+		if(tab[getIndice(cust.type)].contains(cust)) 
+		 tab[getIndice(cust.type)].remove(cust);
+  }
+	
+}
+class Departure extends Event{
+	Customer cust;
+	public Departure(Customer cust)
+	{this.cust=cust;}
+	public void actions(){
+		if(lservice.contains(cust)) 
+			 lservice.remove(cust);
+		lEndServiceCust.add(cust);	
+	}
+}
+
+class EnterInService extends Event{
+	Customer cust;
+	public EnterInService(Customer cust){
+		this.cust=cust;
+	}
+	public void actions(){
+		if(tab[getIndice(cust.type)].contains(cust)) 
+		   tab[getIndice(cust.type)].remove(cust);
+		lservice.add(cust); 
+		if(getIndice(cust.type) == 0)
+			  cust.lf1++;
+		  if(getIndice(cust.type) == 1)
+			  cust.lf2++;
+		  if(getIndice(cust.type) == 2)
+			  cust.lf3++;
+		  if(getIndice(cust.type) == 3)
+			  cust.lf4++;
+		  if(getIndice(cust.type) == 4)
+			  cust.lf5++;
+		  if(getIndice(cust.type) == 5)
+			  cust.lf6++;
+		  if(getIndice(cust.type) == 6)
+			  cust.lf7++;
+		  if(getIndice(cust.type) == 7)
+			  cust.lf8++;
+		  
+		tab2[getIndice(cust.type)]=cust.waitingTime;
+		new Departure(cust).schedule(cust.endServiceTime-cust.beginServiceTime);
+	}
+	
+}
+
+public void simulateOneDay(){
+	
+}
+public double getTime(String l){
+	String t[]=l.split(":");
+	return (Double.parseDouble(t[0])*3600+
+			Double.parseDouble(t[1])*60);
+}
+//suppose que les donnees sont decoupés
+public void readFile(String fileJour) throws IOException{
+	BufferedReader br=new BufferedReader(new FileReader(fileJour));
+		String ligne=br.readLine();	
+		System.out.println (ligne);
+		for(int i=0;i<=4679;i++){
+			ligne=br.readLine();
+			System.out.println (ligne);
+			Customer cust=new Customer();
+			 String[] split = ligne.split(";");
+			 String arrTime= split[0].split(" ")[1];
+			 double arrivalTime=getTime(arrTime) ;
+			 int type=Integer.parseInt(split[1]);
+			 String bsTime=null;
+			 double beginServiceTime=-2;
+			 if(!split[3].equals("NULL"))
+			 { bsTime= split[3].split(" ")[1];
+			   beginServiceTime=getTime(bsTime);
+			   cust.beginServiceTime=beginServiceTime;  
+			 }
+			 String endTime= split[6].split(" ")[1];
+			 double endServiceTime=getTime(endTime);
+			 cust.arrivalTime=arrivalTime;
+			 cust.type=type;
+			 
+				cust.waitingTime=endServiceTime-arrivalTime;
+				 
+			 cust.endServiceTime=endServiceTime;
+			 new Arrival(cust).schedule(cust.arrivalTime); 	
+		}
+		
+}
+
+public void createDataset() throws IOException{
+	String x=null;
+	String y=null;
+	List<String> fichier = Arrays.asList("data2janvier.csv","data3janvier.csv","data4janvier.csv","data5janvier.csv","data6janvier.csv","data7janvier.csv"
+			,"data8janvier.csv","data9janvier.csv","data10janvier.csv","data11janvier.csv","data12janvier.csv","data13janvier.csv","data14janvier.csv","data15janvier.csv","data16janvier.csv"
+			,"data17janvier.csv","data18janvier.csv","data19janvier.csv","data20janvier.csv","data21janvier.csv","data22janvier.csv","data23janvier.csv","data24janvier.csv"
+			,"data25janvier.csv","data26janvier.csv");
+	for(String fichiers: fichier) {
+	BufferedWriter br=new BufferedWriter(new FileWriter(fichiers));
+	String entete="Type;"+"ArrivalTime;"+"LES;"+"NAgent;"+"Lf1;"
+			+"Lf2;"+"Lf3;"+"Lf4;"+"Lf5;"+"Lf6;"+"Lf7;"+"Lf8;"+"WaitingTime";
+	 br.write(entete+"\n");
+	for(Customer c:lEndServiceCust)
+	{  y=""+c.waitingTime;
+	    x=c.type+";"+c.arrivalTime+";"+c.LES+";"+c.numberAgents+";"+c.lf1+";"+c.lf2+";"+c.lf3+";"+c.lf4+";"+c.lf5+";"
+	    +c.lf6+";"+c.lf7+";"+c.lf8;
+	   br.write(x+";"+y+"\n"); 
+	}
+	br.close();
+}}
+class EndOfSim extends Event{
+	public void actions(){
+	Sim.stop();	
+	}
+	
+}
+public void simulateOneDay( String file) throws IOException{ 
+	  Sim.init();
+	  readFile(file);
+      new EndOfSim().schedule (43200);
+      Sim.start();
+}
+
+public static void main(String args[]) throws IOException{
+	TravailFinal tf=new TravailFinal();
+	List<String> fichier = Arrays.asList("2janvier.csv","3janvier.csv","4janvier.csv","5janvier.csv","6janvier.csv","7janvier.csv"
+			,"8janvier.csv","9janvier.csv","10janvier.csv","11janvier.csv","12janvier.csv","13janvier.csv","14janvier.csv","15janvier.csv","16janvier.csv"
+			,"17janvier.csv","18janvier.csv","19janvier.csv","20janvier.csv","21janvier.csv","22janvier.csv","23janvier.csv","24janvier.csv"
+			,"25janvier.csv","26janvier.csv");
+	for(String line: fichier) {
+		for(int i=0;i<=16;i++) {
+	tf.simulateOneDay("data_base/"+line);
+	tf.createDataset();}}
+}
+
+}
